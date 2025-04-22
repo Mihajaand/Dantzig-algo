@@ -1,0 +1,121 @@
+.step-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; /* Espace entre les items */
+  
+  }
+
+  li{
+    text-decoration: none;
+  }
+  
+  .step-item {
+    width: 80%; /* Chaque élément prend 45% de la largeur du conteneur */
+    margin-bottom: 10px;
+  }
+  
+  @media (max-width: 768px) {
+    .step-item {
+      width: 100%; /* Sur petits écrans, chaque élément prend toute la largeur */
+    }
+  }
+
+  
+  .path-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px; /* Espacement entre les cercles */
+    flex-wrap: wrap; /* Permet d'aller à la ligne si nécessaire */
+  }
+  
+  .circle {
+    width: 40px;
+    height: 40px;
+    background: #fffb00; /* Bleu */
+    color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 2px rgba(255, 0, 0, 0.75) dashed;
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+  }
+  .resutat{
+    background-color: rgba(184, 194, 181, 0.4);
+    padding-top: 2px;
+    padding-bottom: 44px;
+  }
+  
+
+  .container {
+    padding: 20px;
+    text-align: center;
+    font-family: Arial, sans-serif;
+  }
+  .champ {
+   background-color: #fcfbfb;
+   width:900px;
+   padding-top: 22px;
+   padding-bottom: 44px;
+    margin-left: 0px;
+    resize: both;
+    overflow: auto;
+  }
+  
+  h1 {
+    color: #333;
+  }
+   
+  h1, h3 {
+    color: #333;
+    margin-top:43px;
+  }
+  
+  
+  button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    margin-top: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: 0.3s ease;
+  }
+  button .test{
+    border-radius: 50%;
+  }
+  button .btn-success{
+    background-color: #2fff00 !important;
+
+  }
+  button:hover {
+    background-color: #0056b3;
+    padding: 20px 20px 20px 20px;
+  }
+  
+  .form {
+
+  }
+  
+  input {
+    padding: 10px;
+    width: 200px !important;
+    border: none;
+    background-color: rgba(184, 194, 181, 0.4);
+    border-radius: 5px;
+
+
+  }
+  
+  
+  .path-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+  }
+  
