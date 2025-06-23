@@ -4,7 +4,7 @@ import '../container/accueil.css';
 //import star from "d3-shape/src/symbol/star";
 
 function App() {
-  const [graph, setGraph] = useState({ nodes: [], edges: [] });
+   const [graph, setGraph] = useState({ nodes: [], edges: [] });
   const [positions, setPositions] = useState({});
   const [startNode, setStartNode] = useState(1);
   const [endNode, setEndNode] = useState(16);
@@ -12,22 +12,18 @@ function App() {
   const [edgeFrom, setEdgeFrom] = useState("");
   const [edgeTo, setEdgeTo] = useState("");
   const [edgeWeight, setEdgeWeight] = useState("");
-  const [detailedSteps, setDetailedSteps] = useState([]); // Pour stocker les étapes détaillées
-  const [lambda, setLambda] = useState({ 1: 0 }); // Initialisation λ1=0
-  const [E, setE] = useState(new Set([1])); // Initialisation E1={X1}
-  const [k, setK] = useState(1); // itération initiale
-  const [showDetailedSteps, setShowDetailedSteps] = useState(false);
+  const [detailedSteps, setDetailedSteps] = useState([]);
   const containerRef = useRef(null);
   const networkRef = useRef(null);
+  const [showDetailedSteps, setShowDetailedSteps] = useState(false);
 
   const addNode = () => {
     const newNode = graph.nodes.length + 1;
-    setGraph((prev) => ({
+    setGraph(prev => ({
       ...prev,
       nodes: [...prev.nodes, newNode],
     }));
-
-    setPositions((prev) => ({
+    setPositions(prev => ({
       ...prev,
       [newNode]: { x: Math.random() * 400, y: Math.random() * 400 },
     }));
@@ -37,211 +33,137 @@ function App() {
     const from = parseInt(edgeFrom);
     const to = parseInt(edgeTo);
     const weight = parseInt(edgeWeight);
-
     if (isNaN(from) || isNaN(to) || isNaN(weight) || from === to) {
       alert("Veuillez entrer des valeurs valides !");
       return;
     }
-
-    setGraph((prev) => ({
+    setGraph(prev => ({
       ...prev,
       edges: [...prev.edges, { from, to, weight }],
     }));
-
     setEdgeFrom("");
     setEdgeTo("");
     setEdgeWeight("");
   };
 
-  // Algorithme dantzing avec mise à jour de λ et E
-  const dantzing = (graph, startNode, endNode) => {
+  const dantzig = (graph, startNode, endNode, isMax = false) => {
     let distances = {};
     let prevNodes = {};
     let unvisited = new Set(graph.nodes);
-    let steps = []; // Pour les étapes détaillées
+    let steps = [];
+    const defaultVal = isMax ? -Infinity : Infinity;
+    const comparator = isMax
+      ? (a, b) => distances[a] > distances[b]
+      : (a, b) => distances[a] < distances[b];
 
-    graph.nodes.forEach((node) => {
-      distances[node] = Infinity;
+    graph.nodes.forEach(node => {
+      distances[node] = defaultVal;
       prevNodes[node] = null;
     });
     distances[startNode] = 0;
+    let E = new Set([startNode]);
+    steps.push({
+      k: 1,
+      current: startNode,
+      formula: `y${startNode} = 0`,
+      lambda: 0,
+      E: new Set(E)
+    });
+    let k = 2;
 
     while (unvisited.size > 0) {
-      let currentNode = [...unvisited].reduce((minNode, node) =>
-          distances[node] < distances[minNode] ? node : minNode
+      let current = [...unvisited].reduce((best, node) =>
+        comparator(node, best) ? node : best
       );
 
-      // Mise à jour de λ et E à chaque étape
-      if (currentNode === startNode) {
-        steps.push({
-          k,
-          currentNode,
-          lambda: distances[currentNode],
-          E: new Set([startNode]),
-        });
-      } else {
-        let vX1X2 = graph.edges.find(edge => edge.from === currentNode)?.weight || 0;
-        let newLambda = distances[currentNode] + vX1X2;
-        setLambda(prevLambda => ({ ...prevLambda, [currentNode]: newLambda }));
-        E.add(currentNode); // Ajouter à l'ensemble E
-        steps.push({
-          k: k + 1,
-          currentNode,
-          lambda: newLambda,
-          E: new Set([...E]),
-        });
-        setE(new Set([...E]));
-        setK(k + 1);
-      }
-
-      if (currentNode === endNode) break;
-      unvisited.delete(currentNode);
+      if (distances[current] === defaultVal) break;
+      unvisited.delete(current);
 
       graph.edges
-          .filter((edge) => edge.from === currentNode)
-          .forEach((edge) => {
-            let newDistance = distances[currentNode] + edge.weight;
-            if (newDistance < distances[edge.to]) {
-              distances[edge.to] = newDistance;
-              prevNodes[edge.to] = currentNode;
-            }
-          });
+        .filter(edge => edge.from === current)
+        .forEach(edge => {
+          let newDist = distances[current] + edge.weight;
+          if (
+            (isMax && newDist > distances[edge.to]) ||
+            (!isMax && newDist < distances[edge.to])
+          ) {
+            distances[edge.to] = newDist;
+            prevNodes[edge.to] = current;
+
+            // Ajouter uniquement les sommets reliés calculés
+            E.add(edge.to);
+            steps.push({
+              k: k++,
+              current: edge.to,
+              formula: `y${edge.to} = y${current} + v(x${current},x${edge.to}) = ${distances[current]} + ${edge.weight} = ${distances[edge.to]}`,
+              lambda: distances[edge.to],
+              E: new Set(E)
+            });
+          }
+        });
+
+      if (current === endNode) break;
     }
 
     let path = [];
-    let current = endNode;
-    while (current !== null) {
-      path.unshift(current);
-      current = prevNodes[current];
+    let curr = endNode;
+    while (curr !== null) {
+      path.unshift(curr);
+      curr = prevNodes[curr];
     }
 
     return { path, distance: distances[endNode], steps };
   };
-    const dantzigMax = (graph, startNode, endNode) => {
-        let distances = {};
-        let prevNodes = {};
-        let unvisited = new Set(graph.nodes);
-        let steps = [];
 
-        graph.nodes.forEach(node => {
-            distances[node] = -Infinity;
-            prevNodes[node] = null;
-        });
-        distances[startNode] = 0;
-
-        while (unvisited.size > 0) {
-            let current = [...unvisited].reduce((maxNode, node) =>
-                distances[node] > distances[maxNode] ? node : maxNode
-            );
-// Mise à jour de λ et E à chaque étape
-if (current === startNode) {
-  steps.push({
-    k,
-    current,
-    lambda: distances[current],
-    E: new Set([startNode]),
-  });
-} 
-else {
-  let vX1X2 = graph.edges.find(edge => edge.from === current)?.weight || 0;
-  let newLambda = distances[current] + vX1X2;
-  setLambda(prevLambda => ({ ...prevLambda, [current]: newLambda }));
-  E.add(current); // Ajouter à l'ensemble E
-  steps.push({
-    k: k + 1,
-    current,
-    lambda: newLambda,
-    E: new Set([...E]),
-  });
-  setE(new Set([...E]));
-  setK(k + 1);
-}
-            
-            if (distances[current] === -Infinity) break;
-            unvisited.delete(current);
-
-            graph.edges
-                .filter(edge => edge.from === current)
-                .forEach(edge => {
-                    let newDist = distances[current] + edge.weight;
-                    if (newDist > distances[edge.to]) {
-                        distances[edge.to] = newDist;
-                        prevNodes[edge.to] = current;
-                    }
-                });
-
-            steps.push({ current, distances: { ...distances }, prevNodes: { ...prevNodes } });
-        }
-
-        let path = [];
-        let current = endNode;
-        while (current !== null) {
-            path.unshift(current);
-            current = prevNodes[current];
-        }
-
-        return { path, distance: distances[endNode], steps };
-    };
-
-
-    const findShortestPath = () => {
+  const findShortestPath = () => {
     if (!graph.nodes.includes(startNode) || !graph.nodes.includes(endNode)) {
       alert("Les sommets doivent exister avant de continuer !");
       return;
     }
-    const res = dantzing(graph, startNode, endNode);
+    const res = dantzig(graph, startNode, endNode, false);
     setResult(res);
-
-    // Mise en évidence du chemin trouvé en rouge
-    const highlightedEdges = graph.edges.map((edge) => ({
+    const highlighted = graph.edges.map(edge => ({
       ...edge,
       color: res.path.includes(edge.from) && res.path.includes(edge.to) ? "red" : "black",
     }));
-
-    setGraph((prev) => ({ ...prev, edges: highlightedEdges }));
-    setDetailedSteps(res.steps); // Mettre à jour les étapes détaillées
+    setGraph(prev => ({ ...prev, edges: highlighted }));
+    setDetailedSteps(res.steps);
   };
+
   const findLongestPath = () => {
-      if (!graph.nodes.includes(startNode) || !graph.nodes.includes(endNode)) {
-          alert("Les sommets doivent exister avant de continuer !");
-          return;
-      }
-      const res = dantzigMax(graph, startNode, endNode);
-      setResult(res);
-
-      const highlightedEdges = graph.edges.map((edge) => ({
-          ...edge,
-          color: res.path.includes(edge.from) && res.path.includes(edge.to) ? "red" : "black",
-      }));
-      setGraph((prev) => ({ ...prev, edges: highlightedEdges }));
-      setDetailedSteps(res.steps); // Mettre à jour les étapes détaillées
-
-
-  }
+    if (!graph.nodes.includes(startNode) || !graph.nodes.includes(endNode)) {
+      alert("Les sommets doivent exister avant de continuer !");
+      return;
+    }
+    const res = dantzig(graph, startNode, endNode, true);
+    setResult(res);
+    const highlighted = graph.edges.map(edge => ({
+      ...edge,
+      color: res.path.includes(edge.from) && res.path.includes(edge.to) ? "red" : "black",
+    }));
+    setGraph(prev => ({ ...prev, edges: highlighted }));
+    setDetailedSteps(res.steps);
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
-
-    const nodes = graph.nodes.map((node) => ({
+    const nodes = graph.nodes.map(node => ({
       id: node,
       label: `x${node}`,
       x: positions[node]?.x || 0,
       y: positions[node]?.y || 0,
       fixed: false,
-        color:"yellow",
-        border:"1px dashed black",
+      color: "yellow",
       physics: false,
     }));
-
-    const edges = graph.edges.map((edge, index) => ({
-      id: index,
+    const edges = graph.edges.map((edge, i) => ({
+      id: i,
       from: edge.from,
       to: edge.to,
       label: `${edge.weight}`,
-      color: { color: edge.color || "black" }, // Appliquer la couleur des arêtes
+      color: { color: edge.color || "black" },
       smooth: { type: "curvedCW", roundness: 0.2 },
     }));
-
     const data = { nodes, edges };
     const options = {
       edges: {
@@ -251,38 +173,19 @@ else {
       },
       physics: true,
     };
-
     if (networkRef.current) {
       networkRef.current.setData(data);
     } else {
       networkRef.current = new Network(containerRef.current, data, options);
     }
-
-    networkRef.current.on("dragEnd", function (params) {
-      let newPositions = { ...positions };
-      params.nodes.forEach((nodeId) => {
-        let pos = networkRef.current.getPositions([nodeId])[nodeId];
-        newPositions[nodeId] = { x: pos.x, y: pos.y };
+    networkRef.current.on("dragEnd", params => {
+      const newPos = { ...positions };
+      params.nodes.forEach(nodeId => {
+        const pos = networkRef.current.getPositions([nodeId])[nodeId];
+        newPos[nodeId] = { x: pos.x, y: pos.y };
       });
-      setPositions(newPositions);
+      setPositions(newPos);
     });
-
-    // networkRef.current.on("click", function (params) {
-    //   if (params.edges.length > 0) {
-    //     const edgeId = params.edges[0];
-    //     const selectedEdge = graph.edges[edgeId];
-
-    //     if (selectedEdge) {
-    //       const newWeight = prompt("Entrez un nouveau poids :", selectedEdge.weight);
-    //       if (newWeight !== null && !isNaN(newWeight)) {
-    //         const updatedEdges = graph.edges.map((edge, index) =>
-    //             index === edgeId ? { ...edge, weight: parseInt(newWeight) } : edge
-    //         );
-    //         setGraph((prev) => ({ ...prev, edges: updatedEdges }));
-    //       }
-    //     }
-    //   }
-    // });
   }, [graph]);
 
   return (
