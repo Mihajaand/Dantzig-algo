@@ -141,7 +141,8 @@ if (current === startNode) {
     lambda: distances[current],
     E: new Set([startNode]),
   });
-} else {
+} 
+else {
   let vX1X2 = graph.edges.find(edge => edge.from === current)?.weight || 0;
   let newLambda = distances[current] + vX1X2;
   setLambda(prevLambda => ({ ...prevLambda, [current]: newLambda }));
@@ -294,8 +295,11 @@ if (current === startNode) {
             <div style={{background: "forestgreen", width: "300px"}}>
             <h2 style={{textDecoration: "uppercase", color: "white"}}>RECHERCHE OPERATIONNELLE</h2>
           </div>
+          
         </div>
+       
           <div style={{display:"flex", flexDirection:"grid", alignItems:"flex-end"}}>
+            
               <div className="champ">
                   <div style={{marginTop: "20px"}}>
                       <h3>Veuillez inserer les valeurs du sommet initial et final du Graphe :</h3>
