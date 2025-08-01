@@ -1,121 +1,162 @@
+:root {
+  --primary: #28a745;
+  --secondary: #ffc107;
+  --danger: #dc3545;
+  --blue: #007bff;
+  --bg-light: #f8f9fa;
+  --text-dark: #333;
+  --graph-bg: #f5f5f5;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg-light);
+}
+
+.container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--primary);
+  color: white;
+  padding: 15px 30px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+}
+
+.header h1 {
+  font-size: 2rem;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.champ {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 128, 0, 0.1);
+  padding: 30px;
+  margin-bottom: 30px;
+  max-width: 900px;
+  margin-inline: auto;
+}
+
+.champ h3 {
+  color: var(--text-dark);
+  margin-bottom: 10px;
+}
+
+
+
+button {
+  background-color: var(--blue);
+  color: white;
+  border: none;
+  padding: 15px 20px;
+  margin: 8px 5px 8px 0;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  width: 100%;
+  font-size: 16px;
+}
+
+button:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+
+button.green {
+  background-color: var(--primary);
+}
+
+button.orange {
+  background-color: var(--secondary);
+  color: black;
+}
+
+button.toggle {
+  width: 100%;
+  background-color: var(--secondary);
+  color: black;
+  font-size: 18px;
+  border-radius: 10px;
+}
+
+.resutat {
+  background-color: rgba(40, 167, 69, 0.1);
+  border-left: 5px solid var(--primary);
+  padding: 30px;
+  border-radius: 10px;
+  margin-top: 40px;
+}
+
+.resutat h3 {
+  font-size: 28px;
+}
+
+.resutat p {
+  font-size: 50px;
+  color: var(--danger);
+}
+
+.path-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.circle {
+  width: 50px;
+  height: 50px;
+  background: var(--secondary);
+  color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px dashed var(--danger);
+  font-size: 18px;
+  font-weight: bold;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.arrow {
+  font-weight: bold;
+  font-size: 24px;
+}
+
 .step-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px; /* Espace entre les items */
-  
-  }
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+  text-align: left;
+}
 
-  li{
-    text-decoration: none;
-  }
-  
-  .step-item {
-    width: 80%; /* Chaque élément prend 45% de la largeur du conteneur */
-    margin-bottom: 10px;
-  }
-  
-  @media (max-width: 768px) {
-    .step-item {
-      width: 100%; /* Sur petits écrans, chaque élément prend toute la largeur */
-    }
-  }
+.step-item {
+  background-color: #fff8dc;
+  padding: 15px;
+  border-left: 5px solid var(--danger);
+  border-radius: 8px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
+}
 
-  
-  .path-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px; /* Espacement entre les cercles */
-    flex-wrap: wrap; /* Permet d'aller à la ligne si nécessaire */
-  }
-  
-  .circle {
-    width: 40px;
-    height: 40px;
-    background: #fffb00; /* Bleu */
-    color: black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    border: 2px rgba(255, 0, 0, 0.75) dashed;
-    font-size: 18px;
-    font-weight: bold;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
-  }
-  .resutat{
-    background-color: rgba(184, 194, 181, 0.4);
-    padding-top: 2px;
-    padding-bottom: 44px;
-  }
-  
-
-  .container {
-    padding: 20px;
-    text-align: center;
-    font-family: Arial, sans-serif;
-  }
-  .champ {
-   background-color: #fcfbfb;
-   width:900px;
-   padding-top: 22px;
-   padding-bottom: 44px;
-    margin-left: 0px;
-    resize: both;
-    overflow: auto;
-  }
-  
-  h1 {
-    color: #333;
-  }
-   
-  h1, h3 {
-    color: #333;
-    margin-top:43px;
-  }
-  
-  
-  button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    margin-top: 10px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: 0.3s ease;
-  }
-  button .test{
-    border-radius: 50%;
-  }
-  button .btn-success{
-    background-color: #2fff00 !important;
-
-  }
-  button:hover {
-    background-color: #0056b3;
-    padding: 20px 20px 20px 20px;
-  }
-  
-  .form {
-
-  }
-  
-  input {
-    padding: 10px;
-    width: 200px !important;
-    border: none;
-    background-color: rgba(184, 194, 181, 0.4);
-    border-radius: 5px;
-
-
-  }
-  
-  
-  .path-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 10px;
-  }
-  
+#graph-container {
+  height: 800px;
+  background-color: var(--graph-bg);
+  border: 3px solid var(--primary);
+  border-radius: 10px;
+  box-shadow: inset -10px -10px 100px rgba(0, 255, 0, 0.2);
+  margin-top: 40px;
+}
