@@ -3,7 +3,6 @@ import { Network } from "vis-network/standalone";
 import "../container/accueil.css";
 
 function App() {
-  /* ----------------------  ÉTATS  ---------------------- */
   const [graph, setGraph] = useState({ nodes: [], edges: [] });
   const [positions, setPositions] = useState({});
   const [startNode, setStartNode] = useState(1);
@@ -12,18 +11,122 @@ function App() {
   const [edgeFrom, setEdgeFrom] = useState("");
   const [edgeTo, setEdgeTo] = useState("");
   const [edgeWeight, setEdgeWeight] = useState("");
-  const [detailedSteps, setDetailedSteps] = useState([]);
+  const [editingEdgeIndex, setEditingEdgeIndex] = useState(null);
+  const [editingWeight, setEditingWeight] = useState("");
   const containerRef = useRef(null);
   const networkRef = useRef(null);
-  const [showDetailedSteps, setShowDetailedSteps] = useState(false);
+  const styles = {
+    container: {
+      fontFamily: 'system-ui, sans-serif',
+    },
 
-  /* ----------------------  AJOUT / SUPPRESSION  ---------------------- */
+    header: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '20px 40px',
+      backgroundColor: '#f4f4f4',
+      borderTop: '4px solid green',
+      borderBottom: '4px solid green',
+    },
+
+    headerLabel: {
+      backgroundColor: 'forestgreen',
+      color: 'white',
+      padding: '20px',
+      fontWeight: 'bold',
+      borderRadius: '6px',
+    },
+
+    title: {
+      color: 'red',
+      fontSize: '40px',
+      margin: 0,
+    },
+
+    main: {
+      display: 'flex',
+      gap: '40px',
+      padding: '20px',
+    },
+
+    controls: {
+      flex: 1,
+    },
+
+    controlsTitle: {
+      marginTop: '20px',
+      marginBottom: '10px',
+    },
+
+    input: {
+      width: '100%',
+      marginBottom: '10px',
+    },
+
+    button: {
+      width: '100%',
+      marginBottom: '10px',
+    },
+
+    buttonGreen: {
+      backgroundColor: 'green',
+      color: 'white',
+    },
+
+    buttonOrange: {
+      backgroundColor: 'orange',
+      color: 'black',
+    },
+
+    buttonBlue: {
+      backgroundColor: '#007bff',
+      color: 'white',
+    },
+
+    buttonApply: {
+      backgroundColor: '#28a745',
+      color: 'white',
+    },
+
+    select: {
+      width: '100%',
+      marginBottom: '5px',
+    },
+
+    result: {
+      marginTop: '20px',
+      textAlign: 'center',
+    },
+
+    resultDistance: {
+      fontSize: '40px',
+      color: 'red',
+    },
+
+    pathNode: {
+      padding: '5px 10px',
+      backgroundColor: '#eee',
+      borderRadius: '50%',
+    },
+
+    pathWrapper: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: '5px',
+    },
+
+    graphContainer: {
+      flex: 2,
+      height: '600px',
+      border: '3px solid green',
+      backgroundColor: 'ghostwhite',
+    },
+  };
   const addNode = () => {
-    const newNode = graph.nodes.length + 1;
-    setGraph((prev) => ({
-      ...prev,
-      nodes: [...prev.nodes, newNode],
-    }));
+    const newNode = (graph.nodes.at(-1) || 0) + 1;
+    setGraph((prev) => ({ ...prev, nodes: [...prev.nodes, newNode] }));
     setPositions((prev) => ({
       ...prev,
       [newNode]: { x: Math.random() * 400, y: Math.random() * 400 },
@@ -34,160 +137,123 @@ function App() {
     const from = parseInt(edgeFrom);
     const to = parseInt(edgeTo);
     const weight = parseInt(edgeWeight);
-    if (isNaN(from) || isNaN(to) || isNaN(weight) || from === to) {
-      alert("Veuillez entrer des valeurs valides !");
+    if (isNaN(from) || isNaN(to) || isNaN(weight)) {
+      alert("Valeurs invalides !");
       return;
     }
-    setGraph((prev) => ({
-      ...prev,
-      edges: [...prev.edges, { from, to, weight }],
-    }));
-    setEdgeFrom("");
-    setEdgeTo("");
-    setEdgeWeight("");
+    setGraph((prev) => ({ ...prev, edges: [...prev.edges, { from, to, weight }] }));
+    setEdgeFrom(""); setEdgeTo(""); setEdgeWeight("");
   };
 
-  /* ----------------------  ALGORITHME DE DANTZIG  ---------------------- */
-  const dantzig = (graph, startNode, endNode, isMax = false) => {
-    const defaultVal = isMax ? -Infinity : Infinity;
-    const comparator = isMax
-      ? (a, b) => distances[a] > distances[b]
-      : (a, b) => distances[a] < distances[b];
+  // ----- Bellman-Ford pour chemin min -----
+  const shortestPathBellmanFord = (g, start, end) => {
+    const dist = {};
+    const prev = {};
+    g.nodes.forEach((n) => dist[n] = Infinity);
+    dist[start] = 0;
 
-    const distances = {};
-    const prevNodes = {};
-    const unvisited = new Set(graph.nodes);
-    const E = new Set([startNode]);
-    const steps = [];
-
-    graph.nodes.forEach((n) => {
-      distances[n] = defaultVal;
-      prevNodes[n] = null;
-    });
-    distances[startNode] = 0;
-
-    steps.push({
-      k: 1,
-      current: startNode,
-      formula: `y${startNode} = 0`,
-      lambda: 0,
-      E: new Set(E),
-    });
-    let k = 2;
-
-    while (unvisited.size) {
-      const current = [...unvisited].reduce(
-        (best, node) =>
-          distances[node] !== defaultVal && comparator(node, best)
-            ? node
-            : best,
-        [...unvisited][0]
-      );
-
-      if (distances[current] === defaultVal) break;
-      unvisited.delete(current);
-
-      /*  On s'arrête dès qu'on a marqué le sommet d'arrivée  */
-      if (current === endNode) break;
-
-      graph.edges
-        .filter((edge) => edge.from === current)
-        .forEach((edge) => {
-          const newDist = distances[current] + edge.weight;
-          if (
-            (isMax && newDist > distances[edge.to]) ||
-            (!isMax && newDist < distances[edge.to])
-          ) {
-            distances[edge.to] = newDist;
-            prevNodes[edge.to] = current;
-
-            if (unvisited.has(edge.to)) {
-              E.add(edge.to);
-              steps.push({
-                k: k++,
-                current: edge.to,
-                formula: `y${edge.to} = y${current} + v(x${current},x${edge.to}) = ${distances[current]} + ${edge.weight} = ${newDist}`,
-                lambda: newDist,
-                E: new Set(E),
-              });
-            }
-          }
-        });
+    for (let i = 0; i < g.nodes.length - 1; i++) {
+      g.edges.forEach(({ from, to, weight }) => {
+        if (dist[from] + weight < dist[to]) {
+          dist[to] = dist[from] + weight;
+          prev[to] = from;
+        }
+      });
     }
 
-    /* Reconstitution du chemin */
     const path = [];
-    let curr = endNode;
-    while (curr !== null) {
-      path.unshift(curr);
-      curr = prevNodes[curr];
+    let current = end;
+    while (current !== undefined) {
+      path.unshift(current);
+      current = prev[current];
     }
-
-    /* Ajout d’une étape finale pour bien afficher la distance de l’arrivée */
-    steps.push({
-      k: steps.length + 1,
-      current: endNode,
-      formula: `y${endNode} = distance finale`,
-      lambda: distances[endNode],
-      E: new Set([endNode]),
-    });
-
-    return { path, distance: distances[endNode], steps };
+    return { path, distance: dist[end] };
   };
 
-  /* ----------------------  HANDLERS  ---------------------- */
+  // ----- DFS pour chemin max sans cycle -----
+  const longestPathDFS = (g, start, end) => {
+    let bestPath = [];
+    let bestDist = -Infinity;
+
+    const adj = {};
+    g.edges.forEach(({ from, to, weight }) => {
+      if (!adj[from]) adj[from] = [];
+      adj[from].push({ to, weight });
+    });
+
+    const dfs = (node, visited, path, dist) => {
+      if (node === end) {
+        if (dist > bestDist) {
+          bestDist = dist;
+          bestPath = [...path];
+        }
+        return;
+      }
+      if (!adj[node]) return;
+      for (const { to, weight } of adj[node]) {
+        if (!visited.has(to)) {
+          visited.add(to);
+          dfs(to, visited, [...path, to], dist + weight);
+          visited.delete(to);
+        }
+      }
+    };
+
+    dfs(start, new Set([start]), [start], 0);
+    return { path: bestPath, distance: bestDist };
+  };
+
   const findShortestPath = () => {
     if (!graph.nodes.includes(startNode) || !graph.nodes.includes(endNode)) {
-      alert("Les sommets doivent exister avant de continuer !");
+      alert("Sommets invalides !");
       return;
     }
-    const res = dantzig(graph, startNode, endNode, false);
+    const res = shortestPathBellmanFord(graph, startNode, endNode);
     setResult(res);
-    const pathSet = new Set(res.path);
-const pathEdges = new Set();
-for (let i = 0; i < res.path.length - 1; i++) {
-  pathEdges.add(`${res.path[i]}-${res.path[i + 1]}`);
-}
-
-const highlighted = graph.edges.map(edge => ({
-  ...edge,
-  color:
-    pathEdges.has(`${edge.from}-${edge.to}`) ? "red" : "black",
-}));
-    setGraph((prev) => ({ ...prev, edges: highlighted }));
-    setDetailedSteps(res.steps);
+    highlightPath(res.path);
   };
 
   const findLongestPath = () => {
     if (!graph.nodes.includes(startNode) || !graph.nodes.includes(endNode)) {
-      alert("Les sommets doivent exister avant de continuer !");
+      alert("Sommets invalides !");
       return;
     }
-    const res = dantzig(graph, startNode, endNode, true);
+    const res = longestPathDFS(graph, startNode, endNode);
+    if (res.distance === -Infinity) {
+      alert("⚠️ Aucun chemin trouvé.");
+    }
     setResult(res);
-    const highlighted = graph.edges.map((edge) => ({
-      ...edge,
-      color:
-        res.path.includes(edge.from) && res.path.includes(edge.to)
-          ? "red"
-          : "black",
-    }));
-    setGraph((prev) => ({ ...prev, edges: highlighted }));
-    setDetailedSteps(res.steps);
+    highlightPath(res.path);
   };
 
-  /* ----------------------  RENDU VISUEL (Network)  ---------------------- */
+  const highlightPath = (path) => {
+    const pathEdges = new Set();
+    for (let i = 0; i < path.length - 1; i++) {
+      pathEdges.add(`${path[i]}-${path[i + 1]}`);
+    }
+    const updated = graph.edges.map((e) => ({
+      ...e,
+      color: pathEdges.has(`${e.from}-${e.to}`) ? "red" : "black",
+    }));
+    setGraph((prev) => ({ ...prev, edges: updated }));
+  };
+
   useEffect(() => {
     if (!containerRef.current) return;
-    const nodes = graph.nodes.map((node) => ({
-      id: node,
-      label: `x${node}`,
-      x: positions[node]?.x || 0,
-      y: positions[node]?.y || 0,
-      fixed: false,
-      color: "yellow",
-      physics: false,
-    }));
+
+    const nodes = graph.nodes.map((node) => {
+      const pos = positions[node] || { x: Math.random() * 400, y: Math.random() * 400 };
+      return {
+        id: node,
+        label: `x${node}`,
+        x: pos.x,
+        y: pos.y,
+        fixed: false,
+        color: "yellow",
+        physics: false,
+      };
+    });
+
     const edges = graph.edges.map((edge, i) => ({
       id: i,
       from: edge.from,
@@ -196,286 +262,95 @@ const highlighted = graph.edges.map(edge => ({
       color: { color: edge.color || "black" },
       smooth: { type: "curvedCW", roundness: 0.2 },
     }));
+
     const data = { nodes, edges };
     const options = {
       edges: {
         arrows: { to: true },
-        font: {
-          size: 13,
-          align: "middle",
-          color: "#000000",
-          background: "#F8F8FF",
-        },
-        smooth: true,
+        font: { size: 13, align: "middle" },
       },
-      physics: true,
+      physics: false,
     };
+
     if (networkRef.current) {
       networkRef.current.setData(data);
     } else {
       networkRef.current = new Network(containerRef.current, data, options);
     }
+
     networkRef.current.on("dragEnd", (params) => {
-      const newPos = { ...positions };
+      const newPositions = { ...positions };
       params.nodes.forEach((nodeId) => {
         const pos = networkRef.current.getPositions([nodeId])[nodeId];
-        newPos[nodeId] = { x: pos.x, y: pos.y };
+        newPositions[nodeId] = { x: pos.x, y: pos.y };
       });
-      setPositions(newPos);
+      setPositions(newPositions);
     });
-  }, [graph]);
+  }, [graph, positions]);
 
-  /* ----------------------  RENDU JSX  ---------------------- */
   return (
     <div className="container">
       {/* HEADER */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          marginLeft: "-250px",
-          justifyContent: "space-between",
-          borderTop: "4px solid green",
-          borderBottom: "4px solid green",
-          padding: "20px 40px",
-          backgroundColor: "#f4f4f4",
-          flexWrap: "wrap",
-          width: "1850px",
-        }}
-      >
-        <div
-          style={{
-            backgroundColor: "forestgreen",
-            color: "white",
-            padding: "35px 20px",
-            fontWeight: "bold",
-            fontSize: "16px",
-            textTransform: "uppercase",
-            borderRadius: "6px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          RECHERCHE OPÉRATIONNELLE
-        </div>
-
-        <h1
-          style={{
-            flex: 1,
-            textAlign: "center",
-            color: "red",
-            fontFamily: "Roboto, sans-serif",
-            fontSize: "40px",
-            margin: "0 20px",
-            minWidth: "250px",
-          }}
-        >
-          Algorithme de DANTZIG
-        </h1>
-
-        <div
-          style={{
-            backgroundColor: "forestgreen",
-            color: "white",
-            padding: "35px 20px",
-            fontWeight: "bold",
-            fontSize: "16px",
-            textTransform: "uppercase",
-            borderRadius: "6px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          RECHERCHE OPÉRATIONNELLE
-        </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 40px", backgroundColor: "#f4f4f4", borderTop: "4px solid green", borderBottom: "4px solid green" }}>
+        <div style={{ backgroundColor: "forestgreen", color: "white", padding: "20px", fontWeight: "bold", borderRadius: "6px" }}>RECHERCHE OPÉRATIONNELLE</div>
+        <h1 style={{ color: "red", fontSize: "40px", margin: 0 }}>Algorithme de DANTZIG</h1>
+        <div style={{ backgroundColor: "forestgreen", color: "white", padding: "20px", fontWeight: "bold", borderRadius: "6px" }}>RECHERCHE OPÉRATIONNELLE</div>
       </div>
 
-      {/* FORMULAIRES */}
-      <div style={{ display: "flex", flexDirection: "grid", alignItems: "flex-end", marginTop: "30px" }}>
-        <div className="champ">
-          <div style={{ marginTop: "20px" }}>
-            <h3>Veuillez inserer les valeurs du sommet initial et final du Graphe :</h3>
-            <div className="form">
-              <div
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>
-                  - Valeur du sommet initial (Xi) :
-                </label>
-                <input
-                  type="number"
-                  placeholder="initiale (Xi)"
-                  value={startNode}
-                  onChange={(e) => setStartNode(parseInt(e.target.value))}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    marginBottom: "15px",
-                    borderRadius: "6px",
-                    border: "1px solid #ccc",
-                    backgroundColor: "#eef0ee",
-                  }}
-                />
+      <div style={{ display: "flex", gap: "40px", padding: "20px" }}>
+        {/* CONTROLES */}
+        <div style={{ flex: 1 }}>
+          <h3>Sommet de début & Finale :</h3>
+          <label>Sommet de début :</label>
+          <input type="number" value={startNode} onChange={(e) => setStartNode(parseInt(e.target.value))} style={{ width: "100%", marginBottom: "10px", height: "34px", background: "#f3f3f3", borderRadius: "15px", padding: "4px" }} />
+          <label>Sommet Finale :</label>
+          <input type="number" value={endNode} onChange={(e) => setEndNode(parseInt(e.target.value))} style={{ width: "100%", marginBottom: "10px", height: "34px", background: "#f3f3f3", borderRadius: "15px", padding: "4px" }} />
+          <button onClick={findShortestPath} style={{ width: "100%", backgroundColor: "green", color: "white", marginBottom: "10px" }}>Chemin MIN</button>
+          <button onClick={findLongestPath} style={{ width: "100%", backgroundColor: "orange", color: "black" }}>Chemin MAX</button>
 
-                <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>
-                  - Valeur du sommet finale (Xn) :
-                </label>
-                <input
-                  type="number"
-                  placeholder="finale (Xn)"
-                  value={endNode}
-                  onChange={(e) => setEndNode(parseInt(e.target.value))}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    marginBottom: "10px",
-                    borderRadius: "6px",
-                    border: "1px solid #ccc",
-                    backgroundColor: "#eef0ee",
-                  }}
-                />
-              </div>
+          {/* AJOUT ARC */}
+          <h3 style={{ marginTop: "20px" }}>Ajouter une relation :</h3>
+          <input type="number" placeholder="Départ (Xa)" value={edgeFrom} onChange={(e) => setEdgeFrom(e.target.value)} style={{ width: "100%", marginBottom: "5px", height: "34px", background: "#f3f3f3", borderRadius: "15px", padding: "4px" }} />
+          <input type="number" placeholder="Arrivée (Xb)" value={edgeTo} onChange={(e) => setEdgeTo(e.target.value)} style={{ width: "100%", marginBottom: "5px", height: "34px", background: "#f3f3f3", borderRadius: "15px", padding: "4px" }} />
+          <input type="number" placeholder="Poids" value={edgeWeight} onChange={(e) => setEdgeWeight(e.target.value)} style={{ width: "100%", marginBottom: "5px", height: "34px", background: "#f3f3f3", borderRadius: "15px", padding: "4px" }} />
+          <button onClick={handleAddEdge} style={{ width: "100%", backgroundColor: "#007bff", color: "white" }}>Ajouter l'arc</button>
 
-              <div style={{ display: "flex", flexDirection: "column", width: "100%", gap: "10px" }}>
-                <button
-                  style={{
-                    backgroundColor: "green",
-                    width: "100%",
-                    padding: "12px",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontWeight: "bold",
-                    fontSize: "16px",
-                    cursor: "pointer",
-                  }}
-                  onClick={findShortestPath}
-                >
-                  Trouver le chemin MINIMALE
-                </button>
+          {/* MODIF ARC */}
+          <h3 style={{ marginTop: "20px" }}>Modifier un poids :</h3>
+          <select onChange={(e) => { const i = parseInt(e.target.value); setEditingEdgeIndex(i); setEditingWeight(graph.edges[i]?.weight || ""); }} style={{ width: "100%", marginBottom: "5px", height: "34px", background: "#f3f3f3", borderRadius: "15px", padding: "4px" }}>
+            <option value="">-- Faire un modif --</option>
+            {graph.edges.map((e, i) => <option key={i} value={i}>{`x${e.from}→x${e.to} (${e.weight})`}</option>)}
+          </select>
+          {editingEdgeIndex !== null && (
+            <>
+              <input type="number" value={editingWeight} onChange={(e) => setEditingWeight(e.target.value)} style={{ width: "100%", marginBottom: "5px", height: "34px", background: "#f3f3f3", borderRadius: "15px", padding: "4px" }} />
+              <button onClick={() => {
+                const newEdges = [...graph.edges];
+                newEdges[editingEdgeIndex].weight = parseInt(editingWeight);
+                setGraph({ ...graph, edges: newEdges });
+                setEditingEdgeIndex(null);
+                findShortestPath();
+                findLongestPath();
+              }} style={{ width: "100%", backgroundColor: "#28a745", color: "white" }}>Appliquer</button>
+            </>
+          )}
 
-                <button
-                  style={{
-                    backgroundColor: "orange",
-                    width: "100%",
-                    padding: "12px",
-                    color: "black",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontWeight: "bold",
-                    fontSize: "16px",
-                    cursor: "pointer",
-                  }}
-                  onClick={findLongestPath}
-                >
-                  Trouver le chemin MAXIMALE
-                </button>
-              </div>
-            </div>
-          </div>
+          <button onClick={addNode} style={{ width: "100%", marginTop: "20px" }}>Ajouter un sommet</button>
 
-          {/* AJOUT D’ARCS */}
-          <div style={{ marginTop: "20px", width: "100%", marginLeft: "0" }}>
-            <h3 style={{ marginBottom: "15px" }}>Ajouter une relation entre deux sommets du graphe :</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-              <div>
-                <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>
-                  - Valeur du sommet de départ (Xa) :
-                </label>
-                <input
-                  type="number"
-                  placeholder="Début de la relation"
-                  value={edgeFrom}
-                  onChange={(e) => setEdgeFrom(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "6px",
-                    border: "1px solid #ccc",
-                    backgroundColor: "#eef0ee",
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>
-                  - Valeur du sommet d’arrivée (Xb) :
-                </label>
-                <input
-                  type="number"
-                  placeholder="Arrivée de la relation"
-                  value={edgeTo}
-                  onChange={(e) => setEdgeTo(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "6px",
-                    border: "1px solid #ccc",
-                    backgroundColor: "#eef0ee",
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>
-                  - Valeur de la relation entre les 2 sommets :
-                </label>
-                <input
-                  type="number"
-                  placeholder="Valeur de la relation"
-                  value={edgeWeight}
-                  onChange={(e) => setEdgeWeight(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "6px",
-                    border: "1px solid #ccc",
-                    backgroundColor: "#eef0ee",
-                  }}
-                />
-              </div>
-
-              <button
-                onClick={handleAddEdge}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  backgroundColor: "#007bff",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  fontWeight: "bold",
-                  fontSize: "16px",
-                  cursor: "pointer",
-                }}
-              >
-                Faire la relation des 2 sommets
-              </button>
-            </div>
-          </div>
-
-          <button style={{ marginTop: "40px" }} onClick={addNode}>
-            Ajouter le sommet suivant
-          </button>
-
-          {/* RÉSULTAT */}
+          {/* RESULTAT */}
           {result && (
-            <div className="resutat" style={{ marginTop: "20px", textAlign: "center" }}>
-              <h3 style={{ fontSize: "30px", textDecorationLine: "none" }}>Résultat :</h3>
-              <p style={{ fontSize: "50px", color: "red" }}>
-                <strong>Z =</strong>{" "}
-                <span style={{ fontSize: "70px", color: "red" }}>{result.distance}</span>
+            <div style={{ marginTop: "20px", textAlign: "center" }}>
+              <h3>Résultat</h3>
+              <p style={{ fontSize: "40px", color: "red", border: "3px solid red" }}>
+                <strong>
+                  Z = {result.distance === Infinity ? "∞" : result.distance}
+                </strong>
               </p>
-              <strong style={{ marginTop: "50px" }}>CHEMIN OPTIMALE :</strong>
-              <div className="path-container">
-                {result.path.map((node, index) => (
-                  <React.Fragment key={index}>
-                    <div className="circle">X{node}</div>
-                    {index < result.path.length - 1 && <span className="arrow">---→</span>}
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "5px" }}>
+                {result.path.map((n, i) => (
+                  <React.Fragment key={i}>
+                    <div style={{ padding: "5px 10px", backgroundColor: "yellow", borderRadius: "50%", width: "34px", height: "34px", display: "flex", justifyContent: "center", alignItems: "center" }}>x{n}</div>
+                    {i < result.path.length - 1 && <span style={{ marginTop: "10px" }}>→</span>}
                   </React.Fragment>
                 ))}
               </div>
@@ -483,75 +358,9 @@ const highlighted = graph.edges.map(edge => ({
           )}
         </div>
 
-        {/* ÉTAPES DÉTAILLÉES */}
-        {detailedSteps.length > 0 && (
-          <div style={{ marginTop: "20px", width: "100%" }}>
-            <button
-              className="test"
-              style={{ backgroundColor: "yellow", color: "black", fontSize: "20px", width: "100%" }}
-              onClick={() => setShowDetailedSteps(!showDetailedSteps)}
-            >
-              {showDetailedSteps ? "V" : "Voir les calculs détaillés ^"}
-            </button>
-            {showDetailedSteps && (
-              <div
-                style={{
-                  backgroundColor: "yellow",
-                  marginTop: "0px",
-                  borderBottomRightRadius: "20px",
-                  borderTopRightRadius: "0px",
-                  paddingTop: "10px",
-                }}
-              >
-                <p style={{ fontStyle: "italic" }}>
-                  à tout sommet Xi £ E(k) on associe le sommet Xi* non £ E(k), tel que v( Xi,Xi* )
-                  soit minimal; <br />
-                  On détermine le sommet à marquer Xp*, tel que λp + v(Xp, Xp*) = min [λi+ v( Xi ,
-                  Xi* )]
-                </p>
-                <ul
-                  style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px" }}
-                  className="step-list"
-                >
-                  {/* Première étape avec λ1 et E1 */}
-                  <p className="step-item">
-                    <span style={{ color: "red" }}>
-                      <strong>λ1 =</strong> 0 <br />
-                    </span>
-                    <strong>E1 =</strong> {"{ x1 }"}
-                  </p>
-
-                  {/* Étapes suivantes */}
-                  {detailedSteps
-                    .filter((s) => s.current !== startNode)
-                    .map((step, index) => (
-                      <p key={index} className="step-item">
-                        <span style={{ color: "red" }}>
-                          <strong>λ{step.current} =</strong> {step.lambda}
-                        </span>
-                        <br />
-                        <strong>E{step.k} =</strong>{" "}
-                        {"{" + [...step.E].map((n) => `x${n}`).join(",") + "}"}
-                      </p>
-                    ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
+        {/* GRAPHE */}
+        <div ref={containerRef} style={{ flex: 2, height: "600px", border: "3px solid green", backgroundColor: "ghostwhite" }}></div>
       </div>
-
-      {/* ZONE GRAPHE */}
-      <div
-        ref={containerRef}
-        style={{
-          height: "900px",
-          border: "3px solid green",
-          marginTop: "20px",
-          backgroundColor: "ghostwhite",
-          boxShadow: "inset -10px -10px 100px rgba(0, 255, 0, 0.3)",
-        }}
-      />
     </div>
   );
 }
